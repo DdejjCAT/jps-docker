@@ -20,7 +20,9 @@ jobs:
           cat /tmp/jbdl/part00 /tmp/jbdl/part01 > /tmp/whatif.AppImage
           chmod +x /tmp/whatif.AppImage
           cd /tmp && /tmp/whatif.AppImage --appimage-extract >/dev/null 2>&1
-          cp -r /tmp/squashfs-root/usr ./game
+          mkdir -p game
+          cp -r /tmp/squashfs-root/usr ""/game 2>/dev/null || true
+          ls -d ""/game/bin/TJPS_OpenGL && echo GAME-READY
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push
