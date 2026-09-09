@@ -19,9 +19,13 @@ jobs:
           curl -L -sS -o /tmp/jbdl/part01 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part01
           cat /tmp/jbdl/part00 /tmp/jbdl/part01 > /tmp/whatif.AppImage
           chmod +x /tmp/whatif.AppImage
-          cd /tmp && /tmp/whatif.AppImage --appimage-extract >/dev/null 2>&1
+          sudo apt-get update -qq >/dev/null 2>&1 || true
+          sudo apt-get install -y -qq squashfs-tools >/dev/null 2>&1 || true
+          which unsquashfs || echo NO-UNSQUASHFS
+          cd /tmp && /tmp/whatif.AppImage --appimage-extract 2>&1 | tail -3 || true
+          ls -d /tmp/squashfs-root || echo NO-SQUASHFS
           mkdir -p /home/runner/work/jps-docker/game
-          cp -r /tmp/squashfs-root/usr /home/runner/work/jps-docker/game 2>/dev/null || true
+          cp -r /tmp/squashfs-root/usr /home/runner/work/jps-docker/game 2>&1 | tail -2 || true
           ls -d /home/runner/work/jps-docker/game/bin/TJPS_OpenGL && echo GAME-READY
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
