@@ -1,0 +1,29 @@
+name: build
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: build-${{ github.ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download game
+        run: |
+          mkdir -p /tmp/jbdl
+          curl -L -sS -o /tmp/jbdl/part00 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part00
+          curl -L -sS -o /tmp/jbdl/part01 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part01
+          cat /tmp/jbdl/part00 /tmp/jbdl/part01 > /tmp/whatif.AppImage
+          chmod +x /tmp/whatif.AppImage
+          cd /tmp && /tmp/whatif.AppImage --appimage-extract >/dev/null 2>&1
+          cp -r /tmp/squashfs-root/usr ./game
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push
+        run: |
+          docker build -t ghcr.io/DdejjCAT/jps-docker/jps-portable:latest .
+          docker push ghcr.io/DdejjCAT/jps-docker/jps-portable:latest
