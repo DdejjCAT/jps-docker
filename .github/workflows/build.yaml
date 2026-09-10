@@ -32,5 +32,6 @@ jobs:
         run: |
           cp /home/runner/work/jps-docker/jps-docker/Dockerfile /tmp/ctx/Dockerfile
           cp /home/runner/work/jps-docker/jps-docker/start.sh /tmp/ctx/start.sh
+          cp /home/runner/work/jps-docker/jps-docker/kasmx.js /tmp/ctx/kasmx.js
           docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest /tmp/ctx
           docker push ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest

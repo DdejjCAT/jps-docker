@@ -12,6 +12,7 @@ RUN curl -sSL -o /tmp/kasm.deb https://github.com/kasmtech/KasmVNC/releases/down
   && rm /tmp/kasm.deb \
   && echo pass | kasmvncpasswd -u root -wo 2>/dev/null || true
 COPY game /game
+COPY kasmx.js /kasmx.js
 RUN chmod +x /game/bin/TJPS_OpenGL 2>/dev/null || true
 ENV DISPLAY=:99 LD_LIBRARY_PATH=/game/bin/lib XDG_RUNTIME_DIR=/tmp/xdg99
 COPY start.sh /start.sh
