@@ -4,21 +4,23 @@ mkdir -p /tmp/xdg99 && chmod 700 /tmp/xdg99
 export DISPLAY=$D XDG_RUNTIME_DIR=/tmp/xdg99 LD_LIBRARY_PATH=/game/bin/lib
 rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
 
-# --- аудио: pulseaudio + null-sink, ffmpeg льёт MP3 на :6912 ---
+# --- аудио: pulseaudio + null-sink, WS+PCM стрим через ws_audio_server.py ---
 export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export PULSE_SINK=vsink SDL_AUDIODRIVER=pulse
-# чистим stale сокет/pid перед стартом и поднимаем pulse с retry
 rm -rf $XDG_RUNTIME_DIR/pulse
 for r in 1 2 3; do
   pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/tmp/pulse.log 2>&1
   [ -S "$PULSE_SERVER" ] && break
   sleep 2
 done
-pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/dev/null 2>&1 || true --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/tmp/pulse.log 2>&1 || true
 for i in $(seq 1 20); do [ -S "$PULSE_SERVER" ] && break; sleep 0.5; done
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-sink vsink >/dev/null 2>&1 || true
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-source vsink.monitor >/dev/null 2>&1 || true
-setsid nohup bash -c 'while true; do ffmpeg -hide_banner -loglevel error -fflags nobuffer -flags low_delay -avioflags direct -flush_packets 1 -max_delay 50000 -f pulse -i vsink.monitor -ac 2 -c:a libmp3lame -b:a 64k -f mp3 -listen 1 http://0.0.0.0:6912/stream.mp3 >>/tmp/ffmpeg.log 2>&1; sleep 1; done' >/dev/null 2>&1 &
+
+# WS+PCM вместо HTTP-MP3 (MP3 буферизуется gh-туннелем на 15-20с)
+if python3 -c 'import websockets' 2>/dev/null && [ -f /opt/ws_audio_server.py ]; then
+  setsid nohup python3 /opt/ws_audio_server.py >/tmp/ws_audio.log 2>&1 < /dev/null &
+fi
 
 setsid nohup Xvnc -interface 0.0.0.0 -disableBasicAuth -RectThreads 8 \
   -Log *:stdout:20 -httpd /usr/share/kasmvnc/www -sslOnly 0 \
@@ -33,6 +35,6 @@ DISPLAY=$D setsid nohup /game/bin/TJPS_OpenGL >/tmp/game.log 2>&1 &
 sleep 22
 echo "GAME: $(pgrep -af TJPS_OpenGL | head -1)"
 echo "WINDOW: $(DISPLAY=$D xdotool search --name \"The Jackbox\" 2>/dev/null | head -1)"
-echo "AUDIO: $(pgrep -af ffmpeg | head -1)"
+echo "AUDIO: $(pgrep -af 'ws_audio_server|ffmpeg' | head -2)"
 echo CONTAINER-READY
 tail -f /dev/null
