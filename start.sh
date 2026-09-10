@@ -7,7 +7,14 @@ rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
 # --- аудио: pulseaudio + null-sink, ffmpeg льёт MP3 на :6912 ---
 export PULSE_SERVER=unix:$XDG_RUNTIME_DIR/pulse/native
 export PULSE_SINK=vsink SDL_AUDIODRIVER=pulse
-pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/tmp/pulse.log 2>&1 || true
+# чистим stale сокет/pid перед стартом и поднимаем pulse с retry
+rm -rf $XDG_RUNTIME_DIR/pulse
+for r in 1 2 3; do
+  pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/tmp/pulse.log 2>&1
+  [ -S "$PULSE_SERVER" ] && break
+  sleep 2
+done
+pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/dev/null 2>&1 || true --exit-idle-time=-1 --load="module-null-sink sink_name=vsink rate=48000 channels=2" >/tmp/pulse.log 2>&1 || true
 for i in $(seq 1 20); do [ -S "$PULSE_SERVER" ] && break; sleep 0.5; done
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-sink vsink >/dev/null 2>&1 || true
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-source vsink.monitor >/dev/null 2>&1 || true
