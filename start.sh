@@ -18,7 +18,7 @@ pulseaudio --daemonize=yes --exit-idle-time=-1 --load="module-null-sink sink_nam
 for i in $(seq 1 20); do [ -S "$PULSE_SERVER" ] && break; sleep 0.5; done
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-sink vsink >/dev/null 2>&1 || true
 PULSE_SERVER="$PULSE_SERVER" pactl set-default-source vsink.monitor >/dev/null 2>&1 || true
-setsid nohup bash -c 'while true; do ffmpeg -hide_banner -loglevel error -f pulse -i vsink.monitor -ac 2 -c:a libmp3lame -b:a 128k -f mp3 -listen 1 http://0.0.0.0:6912/stream.mp3 >>/tmp/ffmpeg.log 2>&1; sleep 1; done' >/dev/null 2>&1 &
+setsid nohup bash -c 'while true; do ffmpeg -hide_banner -loglevel error -fflags nobuffer -flags low_delay -avioflags direct -flush_packets 1 -max_delay 50000 -f pulse -i vsink.monitor -ac 2 -c:a libmp3lame -b:a 64k -f mp3 -listen 1 http://0.0.0.0:6912/stream.mp3 >>/tmp/ffmpeg.log 2>&1; sleep 1; done' >/dev/null 2>&1 &
 
 setsid nohup Xvnc -interface 0.0.0.0 -disableBasicAuth -RectThreads 8 \
   -Log *:stdout:20 -httpd /usr/share/kasmvnc/www -sslOnly 0 \
