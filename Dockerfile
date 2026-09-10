@@ -5,6 +5,7 @@ RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
   x11-xkb-utils curl procps ca-certificates perl libswitch-perl libyaml-tiny-perl \
   libhash-merge-simple-perl liblist-moreutils-perl libtry-tiny-perl \
   libdatetime-perl libdatetime-timezone-perl ssl-cert \
+  pulseaudio pulseaudio-utils ffmpeg \
   && rm -rf /var/lib/apt/lists/*
 RUN curl -sSL -o /tmp/kasm.deb https://github.com/kasmtech/KasmVNC/releases/download/v1.5.0/kasmvncserver_noble_1.5.0_amd64.deb \
   && dpkg -i /tmp/kasm.deb 2>&1 | tail -2 || true \
