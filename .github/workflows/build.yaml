@@ -21,16 +21,16 @@ jobs:
           chmod +x /tmp/whatif.AppImage
           sudo apt-get update -qq >/dev/null 2>&1 || true
           sudo apt-get install -y -qq squashfs-tools >/dev/null 2>&1 || true
-          which unsquashfs || echo NO-UNSQUASHFS
           cd /tmp && /tmp/whatif.AppImage --appimage-extract 2>&1 | tail -3 || true
           ls -d /tmp/squashfs-root || echo NO-SQUASHFS
-          DST=/home/runner/work/jps-docker/jps-docker/game
-          mkdir -p ""
-          cp -a /tmp/squashfs-root/usr/. "" 2>&1 | tail -2 || true
-          ls -d "/bin/TJPS_OpenGL" && echo GAME-READY
+          mkdir -p /tmp/ctx/game
+          cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
+          ls -d /tmp/ctx/game/bin/TJPS_OpenGL && echo GAME-READY
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push
         run: |
-          docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable:latest .
+          cp /home/runner/work/jps-docker/jps-docker/Dockerfile /tmp/ctx/Dockerfile
+          cp /home/runner/work/jps-docker/jps-docker/start.sh /tmp/ctx/start.sh
+          docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable:latest /tmp/ctx
           docker push ghcr.io/ddejjcat/jps-docker/jps-portable:latest
