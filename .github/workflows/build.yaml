@@ -12,7 +12,7 @@ jobs:
     concurrency: build-${{ github.ref }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download game
+      - name: Download game jps
         run: |
           mkdir -p /tmp/jbdl
           curl -L -sS -o /tmp/jbdl/part00 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part00
@@ -26,6 +26,15 @@ jobs:
           mkdir -p /tmp/ctx/game
           cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
           ls -d /tmp/ctx/game/bin/TJPS_OpenGL && echo GAME-READY
+      - name: Download game jpp2
+        run: |
+          curl -L -sS -o /tmp/JPP2.AppImage https://github.com/DdejjCAT/jackbox-files/releases/download/jpp2/JPP2.AppImage
+          chmod +x /tmp/JPP2.AppImage
+          cd /tmp && /tmp/JPP2.AppImage --appimage-extract 2>&1 | tail -3 || true
+          ls -d /tmp/squashfs-root || echo NO-SQUASHFS-JPP2
+          mkdir -p /tmp/ctx/game2
+          cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game2 2>&1 | tail -2 || true
+          ls -d /tmp/ctx/game2/bin/TJPP2_OpenGL && echo JPP2-READY
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push

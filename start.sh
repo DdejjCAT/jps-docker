@@ -1,7 +1,13 @@
 #!/bin/bash
 D=:99
 mkdir -p /tmp/xdg99 && chmod 700 /tmp/xdg99
-export DISPLAY=$D XDG_RUNTIME_DIR=/tmp/xdg99 LD_LIBRARY_PATH=/game/bin/lib
+export DISPLAY=$D XDG_RUNTIME_DIR=/tmp/xdg99
+if [ "${GAME:-jps}" = "jpp2" ]; then
+  GB=/game2; BIN=/game2/bin/TJPP2_OpenGL
+else
+  GB=/game; BIN=/game/bin/TJPS_OpenGL
+fi
+export LD_LIBRARY_PATH=$GB/bin/lib
 rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
 
 # --- аудио: pulseaudio + null-sink, WS+PCM стрим через ws_audio_server.py ---
@@ -31,10 +37,11 @@ grep -q kasmx.js /usr/share/kasmvnc/www/vnc.html 2>/dev/null || sed -i "s|<body>
 for i in $(seq 1 30); do DISPLAY=$D xdpyinfo >/dev/null 2>&1 && break; sleep 1; done
 DISPLAY=$D xdpyinfo >/dev/null 2>&1 || { echo KASM-FAIL; tail -20 /tmp/kasm.log; exit 1; }
 DISPLAY=$D openbox &>/dev/null & sleep 1
-DISPLAY=$D setsid nohup /game/bin/TJPS_OpenGL >/tmp/game.log 2>&1 &
+cd $GB/bin || true
+DISPLAY=$D setsid nohup $BIN >/tmp/game.log 2>&1 &
 sleep 22
-echo "GAME: $(pgrep -af TJPS_OpenGL | head -1)"
-echo "WINDOW: $(DISPLAY=$D xdotool search --name \"The Jackbox\" 2>/dev/null | head -1)"
+echo "GAME: $(pgrep -af "TJPS_OpenGL|TJPP2_OpenGL" | head -1)"
+echo "WINDOW: $(DISPLAY=$D xdotool search --name "The Jackbox" 2>/dev/null | head -1)"
 echo "AUDIO: $(pgrep -af 'ws_audio_server|ffmpeg' | head -2)"
 echo CONTAINER-READY
 tail -f /dev/null
