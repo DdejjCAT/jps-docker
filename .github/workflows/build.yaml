@@ -24,9 +24,10 @@ jobs:
           which unsquashfs || echo NO-UNSQUASHFS
           cd /tmp && /tmp/whatif.AppImage --appimage-extract 2>&1 | tail -3 || true
           ls -d /tmp/squashfs-root || echo NO-SQUASHFS
-          mkdir -p /home/runner/work/jps-docker/game
-          cp -a /tmp/squashfs-root/usr/. /home/runner/work/jps-docker/game 2>&1 | tail -2 || true
-          ls -d /home/runner/work/jps-docker/game/bin/TJPS_OpenGL && echo GAME-READY
+          DST=/home/runner/work/jps-docker/jps-docker/game
+          mkdir -p ""
+          cp -a /tmp/squashfs-root/usr/. "" 2>&1 | tail -2 || true
+          ls -d "/bin/TJPS_OpenGL" && echo GAME-READY
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build and push
