@@ -32,5 +32,5 @@ jobs:
         run: |
           cp /home/runner/work/jps-docker/jps-docker/Dockerfile /tmp/ctx/Dockerfile
           cp /home/runner/work/jps-docker/jps-docker/start.sh /tmp/ctx/start.sh
-          docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable:latest /tmp/ctx
-          docker push ghcr.io/ddejjcat/jps-docker/jps-portable:latest
+          docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest /tmp/ctx
+          docker push ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest
