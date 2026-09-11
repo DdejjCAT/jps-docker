@@ -91,3 +91,20 @@
   setTimeout(kxStart,9000);
   setTimeout(kxStart,30000);
 })();
+(function(){
+  // Растягиваем видеоканвас на ВЕСЬ экран (без сохранения пропорций).
+  // Выбираем самый большой canvas (#noVNC canvas), укладываем его по viewport,
+  // повторяем каждую секунду, чтобы перебить пересчёты масштаба KasmVNC.
+  function kxStretch(){
+    var b=null,w=-1;
+    try{document.querySelectorAll('canvas').forEach(function(c){if((c.width||0)>w){w=c.width;b=c;}});}catch(e){}
+    if(!b||w<300){setTimeout(kxStretch,500);return;}
+    var s=b.style;
+    s.position='fixed';s.left='0';s.top='0';
+    s.width='100vw';s.height='100vh';
+    s.maxWidth='none';s.maxHeight='none';
+    s.objectFit='fill';s.margin='0';s.border='0';s.zIndex='5';
+    setTimeout(kxStretch,1000);
+  }
+  setTimeout(kxStretch,200);
+})();

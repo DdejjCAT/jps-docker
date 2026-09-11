@@ -4,6 +4,8 @@ mkdir -p /tmp/xdg99 && chmod 700 /tmp/xdg99
 export DISPLAY=$D XDG_RUNTIME_DIR=/tmp/xdg99
 if [ "${GAME:-jps}" = "jpp2" ]; then
   BIN=/game/bin/TJPP2_OpenGL
+elif [ "${GAME:-jps}" = "jpp4" ]; then
+  BIN=/game/bin/TJPP4_OpenGL
 elif [ "${GAME:-jps}" = "jpp11" ]; then
   BIN=/game/bin/TJPP11_OpenGL
 else
@@ -42,7 +44,7 @@ DISPLAY=$D openbox &>/dev/null & sleep 1
 cd /game/bin || true
 DISPLAY=$D setsid nohup $BIN >/tmp/game.log 2>&1 &
 sleep 22
-echo "GAME: $(pgrep -af "TJPS_OpenGL|TJPP2_OpenGL|TJPP11_OpenGL" | head -1)"
+echo "GAME: $(pgrep -af "TJPS_OpenGL|TJPP2_OpenGL|TJPP4_OpenGL|TJPP11_OpenGL" | head -1)"
 echo "WINDOW: $(DISPLAY=$D xdotool search --name "The Jackbox" 2>/dev/null | head -1)"
 echo "AUDIO: $(pgrep -af 'ws_audio_server|ffmpeg' | head -2)"
 echo CONTAINER-READY
