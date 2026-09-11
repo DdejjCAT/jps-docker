@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       game:
-        description: game to build (jps | jpp2)
+        description: game to build (jps | jpp2 | jpp11)
         required: true
         type: choice
-        options: [jps, jpp2]
+        options: [jps, jpp2, jpp11]
   push:
     branches: [main]
 permissions:
@@ -36,6 +36,14 @@ jobs:
             mkdir -p /tmp/ctx/game
             cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
             ls -d /tmp/ctx/game/bin/TJPP2_OpenGL && echo GAME-READY
+          elif [ "$GAME" = "jpp11" ]; then
+            curl -L -sS -o /tmp/JPP11.AppImage "https://serverly.s3.twcstorage.ru/JPP11-ru-(3of5)-(build-123)-WhatIf-13.01.2026.AppImage"
+            chmod +x /tmp/JPP11.AppImage
+            cd /tmp && /tmp/JPP11.AppImage --appimage-extract 2>&1 | tail -3 || true
+            ls -d /tmp/squashfs-root || echo NO-SQUASHFS
+            mkdir -p /tmp/ctx/game
+            cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
+            ls -d /tmp/ctx/game/bin/TJPP11_OpenGL && echo GAME-READY
           else
             curl -L -sS -o /tmp/jbdl/part00 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part00
             curl -L -sS -o /tmp/jbdl/part01 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part01
