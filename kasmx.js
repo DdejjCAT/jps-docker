@@ -72,13 +72,12 @@
     return touch||(w>0&&w<900);
   }
   function kxForceScale(){
-    if(kxFired)return;
     var el=document.getElementById('noVNC_setting_resize');
     if(!el)return setTimeout(kxForceScale,250);
-    if(el.value!=='scale'){
-      el.value='scale';
-      try{el.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
-    }
+    if(el.value!=='scale'){el.value='scale';}
+    // re-dispatch: applyResizeMode() требует o.rfb и применяет scale только после
+    // соединения/следующего фрейма — повторяем, пока не подействует.
+    try{el.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
     kxFired=true;
   }
   function kxStart(){
@@ -90,4 +89,5 @@
   setTimeout(kxStart,1200);
   setTimeout(kxStart,4000);
   setTimeout(kxStart,9000);
+  setTimeout(kxStart,30000);
 })();
