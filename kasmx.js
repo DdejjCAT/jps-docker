@@ -62,3 +62,32 @@
     });
   });
 })();
+(function(){
+  // На мобильных автоматически включаем Local Scaling (resize=scale),
+  // чтобы стрим 1280x720 целиком умещался в границы экрана телефона.
+  var kxFired=false;
+  function kxIsMobile(){
+    var w=window.innerWidth||document.documentElement.clientWidth||screen.width;
+    var touch=('ontouchstart' in window)||(navigator.maxTouchPoints&&navigator.maxTouchPoints>0);
+    return touch||(w>0&&w<900);
+  }
+  function kxForceScale(){
+    if(kxFired)return;
+    var el=document.getElementById('noVNC_setting_resize');
+    if(!el)return setTimeout(kxForceScale,250);
+    if(el.value!=='scale'){
+      el.value='scale';
+      try{el.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
+    }
+    kxFired=true;
+  }
+  function kxStart(){
+    if(!kxIsMobile())return;
+    kxForceScale();
+  }
+  if(document.readyState==='complete'){kxStart();}
+  else if(document.addEventListener){document.addEventListener('DOMContentLoaded',kxStart);window.addEventListener('load',kxStart);}
+  setTimeout(kxStart,1200);
+  setTimeout(kxStart,4000);
+  setTimeout(kxStart,9000);
+})();
