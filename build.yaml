@@ -1,0 +1,74 @@
+name: build
+on:
+  workflow_dispatch:
+    inputs:
+      game:
+        description: game to build (jps | jpp2 | jpp11)
+        required: true
+        type: choice
+        options: [jps, jpp2, jpp11]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  packages: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency: build-${{ github.ref }}-${{ inputs.game || 'jps' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select game
+        id: sel
+        run: |
+          G=main
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then G=${{ inputs.game }}; fi
+          echo "game=$G" >> "$GITHUB_OUTPUT"
+      - name: Download game
+        run: |
+          GAME=${{ steps.sel.outputs.game }}
+          mkdir -p /tmp/jbdl
+          if [ "$GAME" = "jpp2" ]; then
+            curl -L -sS -o /tmp/JPP2.AppImage https://github.com/DdejjCAT/jackbox-files/releases/download/jpp2/JPP2.AppImage
+            chmod +x /tmp/JPP2.AppImage
+            cd /tmp && /tmp/JPP2.AppImage --appimage-extract 2>&1 | tail -3 || true
+            ls -d /tmp/squashfs-root || echo NO-SQUASHFS
+            mkdir -p /tmp/ctx/game
+            cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
+            ls -d /tmp/ctx/game/bin/TJPP2_OpenGL && echo GAME-READY
+          elif [ "$GAME" = "jpp11" ]; then
+            curl -L -sS -o /tmp/JPP11.AppImage "https://serverly.s3.twcstorage.ru/JPP11-ru-(3of5)-(build-123)-WhatIf-13.01.2026.AppImage"
+            chmod +x /tmp/JPP11.AppImage
+            cd /tmp && /tmp/JPP11.AppImage --appimage-extract 2>&1 | tail -3 || true
+            ls -d /tmp/squashfs-root || echo NO-SQUASHFS
+            mkdir -p /tmp/ctx/game
+            cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
+            ls -d /tmp/ctx/game/bin/TJPP11_OpenGL && echo GAME-READY
+          else
+            curl -L -sS -o /tmp/jbdl/part00 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part00
+            curl -L -sS -o /tmp/jbdl/part01 https://github.com/DdejjCAT/jackbox-files/releases/download/jps/part01
+            cat /tmp/jbdl/part00 /tmp/jbdl/part01 > /tmp/whatif.AppImage
+            chmod +x /tmp/whatif.AppImage
+            sudo apt-get update -qq >/dev/null 2>&1 || true
+            sudo apt-get install -y -qq squashfs-tools >/dev/null 2>&1 || true
+            cd /tmp && /tmp/whatif.AppImage --appimage-extract 2>&1 | tail -3 || true
+            ls -d /tmp/squashfs-root || echo NO-SQUASHFS
+            mkdir -p /tmp/ctx/game
+            cp -a /tmp/squashfs-root/usr/. /tmp/ctx/game 2>&1 | tail -2 || true
+            ls -d /tmp/ctx/game/bin/TJPS_OpenGL && echo GAME-READY
+          fi
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build and push
+        run: |
+          GAME=${{ steps.sel.outputs.game }}
+          cp /home/runner/work/jps-docker/jps-docker/Dockerfile /tmp/ctx/Dockerfile
+          cp /home/runner/work/jps-docker/jps-docker/start.sh /tmp/ctx/start.sh
+          cp /home/runner/work/jps-docker/jps-docker/kasmx.js /tmp/ctx/kasmx.js
+          cp /home/runner/work/jps-docker/jps-docker/ws_audio_server.py /tmp/ctx/ws_audio_server.py
+          docker build -t ghcr.io/ddejjcat/jps-docker/jps-portable-gac:${GAME} /tmp/ctx
+          docker push ghcr.io/ddejjcat/jps-docker/jps-portable-gac:${GAME}
+          if [ "$GAME" = "jps" ]; then
+            docker tag ghcr.io/ddejjcat/jps-docker/jps-portable-gac:${GAME} ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest
+            docker push ghcr.io/ddejjcat/jps-docker/jps-portable-gac:latest
+          fi
