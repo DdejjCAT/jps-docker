@@ -92,19 +92,35 @@
   setTimeout(kxStart,30000);
 })();
 (function(){
-  // Растягиваем видеоканвас на ВЕСЬ экран (без сохранения пропорций).
-  // Выбираем самый большой canvas (#noVNC canvas), укладываем его по viewport,
-  // повторяем каждую секунду, чтобы перебить пересчёты масштаба KasmVNC.
-  function kxStretch(){
-    var b=null,w=-1;
-    try{document.querySelectorAll('canvas').forEach(function(c){if((c.width||0)>w){w=c.width;b=c;}});}catch(e){}
-    if(!b||w<300){setTimeout(kxStretch,500);return;}
-    var s=b.style;
-    s.position='fixed';s.left='0';s.top='0';
-    s.width='100vw';s.height='100vh';
-    s.maxWidth='none';s.maxHeight='none';
-    s.objectFit='fill';s.margin='0';s.border='0';s.zIndex='5';
-    setTimeout(kxStretch,1000);
+  // Растягиваем видеоканвас на ВЕСЬ экран, сохраняя соответствие ввода:
+  // KasmVNC считает координаты мыши от _canvas (input-канвас, tabIndex=-1) через
+  // getBoundingClientRect. Если растягивать ТОЛЬКО видимый WebGL-канвас - ввод разъезжается.
+  // Поэтому fixed-растягиваем И input-канвас, И все видимые канвасы одновременно.
+  function kxStretchV2(){
+    var lst=[];
+    try{lst=Array.prototype.slice.call(document.querySelectorAll('canvas'));}catch(e){}
+    var cv=null,foundInput=false;
+    lst.forEach(function(c){ if(c.tabIndex===-1){cv=c;foundInput=true;} });
+    if(!cv){
+      var w=-1;
+      lst.forEach(function(c){ if((c.width||0)>w){w=c.width;cv=c;} });
+    }
+    if(!cv){setTimeout(kxStretchV2,500);return;}
+    if(!foundInput&&cv.width<300){setTimeout(kxStretchV2,500);return;}
+    var scr=cv.parentElement;
+    if(scr){
+      try{scr.style.overflow='hidden';scr.style.width='100vw';scr.style.height='100vh';scr.style.position='fixed';scr.style.left='0';scr.style.top='0';scr.style.margin='0';scr.style.maxWidth='none';}catch(e){}
+    }
+    var s=cv.style;
+    s.position='fixed';s.left='0';s.top='0';s.width='100vw';s.height='100vh';
+    s.maxWidth='none';s.maxHeight='none';s.objectFit='fill';s.margin='0';s.border='0';s.zIndex='5';
+    var z=4;
+    lst.forEach(function(c){ if(c===cv)return; var cs=c.style;
+      cs.position='fixed';cs.left='0';cs.top='0';cs.width='100vw';cs.height='100vh';
+      cs.maxWidth='none';cs.maxHeight='none';cs.objectFit='fill';cs.margin='0';cs.border='0';cs.zIndex=String(z); });
+    setTimeout(kxStretchV2,1000);
   }
-  setTimeout(kxStretch,200);
+  setTimeout(kxStretchV2,200);
+  setTimeout(kxStretchV2,1500);
+  setTimeout(kxStretchV2,5000);
 })();
