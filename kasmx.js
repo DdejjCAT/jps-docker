@@ -1,7 +1,7 @@
 (function(){
   function css(id,c){var s=document.createElement('style');s.id=id;s.textContent=c;document.head.appendChild(s);}
   css('kx-css',
-    '.kx{position:absolute;top:8px;right:8px;z-index:999999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;opacity:.22;transition:opacity .25s}'+
+    'body{margin:0!important}.kx{position:absolute;top:8px;right:8px;z-index:999999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;opacity:.22;transition:opacity .25s}'+
     '.kx:hover{opacity:1}'+
     '.kx button{width:46px;height:46px;border:0;border-radius:10px;background:#111827;color:#fff;font-size:21px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.55);line-height:1}'+
     '.kx button:hover{background:#1f2937}'+
@@ -63,64 +63,71 @@
   });
 })();
 (function(){
-  // На мобильных автоматически включаем Local Scaling (resize=scale),
-  // чтобы стрим 1280x720 целиком умещался в границы экрана телефона.
-  var kxFired=false;
-  function kxIsMobile(){
-    var w=window.innerWidth||document.documentElement.clientWidth||screen.width;
-    var touch=('ontouchstart' in window)||(navigator.maxTouchPoints&&navigator.maxTouchPoints>0);
-    return touch||(w>0&&w<900);
+  // kxStretchV3: правильно масштабируем без поломки ввода.
+  // Проблема: CSS-растягивание канваса на 100vw/100vh НЕ меняет внутренний
+  // scale, по которому KasmVNC переводит clientX в координаты сервера (remote=clientX/scale).
+  // Вместо этого:
+  //  1) растягиваем на весь экран КОНТЕЙНЕР канваса (его размер читает KasmVNC);
+  //  2) включаем НАТИВНЫЙ resize=scale — KasmVNC сам выставляет scale и канвас,
+  //     а значит и ввод, и курсор оказываются правильными;
+  //  3) убираем свой CSS-стилинг канвасов, оставшийся от старых версий.
+  //  4) dot-курсор (z-index 65535) ставится приложением в raw-координатах сервера
+  //     (0..1920) — переотображаем его через transform по тому же scale.
+  (function(){var st=document.createElement('style');st.textContent='body{margin:0!important;background:#000}';document.head.appendChild(st);})();
+  function kxStretchV3(){
+    try{
+      var lst=Array.prototype.slice.call(document.querySelectorAll('canvas'));
+      var big=null;lst.forEach(function(c){if(!big||(c.width||0)>(big.width||0))big=c;});
+      if(!big)return;
+
+      // откатываем старый CSS-стилинг канвасов (наш собственный из старых версий)
+      lst.forEach(function(c){
+        var cs=c.style;
+        if(Number(cs.zIndex)>=4||cs.position==='fixed'){
+          cs.position='';cs.left='';cs.top='';cs.width='';cs.height='';
+          cs.maxWidth='';cs.maxHeight='';cs.objectFit='';cs.margin='';
+          cs.border='';cs.zIndex='';cs.right='';cs.bottom='';
+        }
+      });
+
+      // контейнер канваса — на весь экран; сам канвас оставляем KasmVNC.
+      var scr=big.parentElement;
+      if(scr){
+        scr.style.overflow='hidden';
+        scr.style.width='100vw';
+        scr.style.height='100vh';
+        scr.style.maxWidth='none';
+        scr.style.maxHeight='none';
+        scr.style.margin='0';
+      }
+
+      // нативный resize=scale: ввод и курсор считаются самим KasmVNC
+      var sel=document.getElementById('noVNC_setting_resize');
+      if(sel){
+        if(sel.value!=='scale')sel.value='scale';
+        try{sel.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
+      }
+
+      // dot-курсор KasmVNC (canvas, fixed, z-index 65535) — пересчитываем по тому же масштабу
+      (function(){
+        var dot=null;
+        for(var i=0;i<lst.length;i++){
+          var c=lst[i];
+          if(c.style.zIndex==='65535'){dot=c;break;}
+        }
+        if(dot){
+          var S=(big.getBoundingClientRect().width||big.width)/(big.width||1);
+          var L=parseFloat(dot.style.left),T=parseFloat(dot.style.top);
+          if(isFinite(L)&&isFinite(T)&&(L>window.innerWidth||T>window.innerHeight)){
+            dot.style.transform='translate('+Math.round(L*(S-1))+'px,'+Math.round(T*(S-1))+'px)';
+          }
+        }
+      })();
+    }catch(e){}
+    setTimeout(kxStretchV3,500);
   }
-  function kxForceScale(){
-    var el=document.getElementById('noVNC_setting_resize');
-    if(!el)return setTimeout(kxForceScale,250);
-    if(el.value!=='scale'){el.value='scale';}
-    // re-dispatch: applyResizeMode() требует o.rfb и применяет scale только после
-    // соединения/следующего фрейма — повторяем, пока не подействует.
-    try{el.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}
-    kxFired=true;
-  }
-  function kxStart(){
-    if(!kxIsMobile())return;
-    kxForceScale();
-  }
-  if(document.readyState==='complete'){kxStart();}
-  else if(document.addEventListener){document.addEventListener('DOMContentLoaded',kxStart);window.addEventListener('load',kxStart);}
-  setTimeout(kxStart,1200);
-  setTimeout(kxStart,4000);
-  setTimeout(kxStart,9000);
-  setTimeout(kxStart,30000);
-})();
-(function(){
-  // Растягиваем видеоканвас на ВЕСЬ экран, сохраняя соответствие ввода:
-  // KasmVNC считает координаты мыши от _canvas (input-канвас, tabIndex=-1) через
-  // getBoundingClientRect. Если растягивать ТОЛЬКО видимый WebGL-канвас - ввод разъезжается.
-  // Поэтому fixed-растягиваем И input-канвас, И все видимые канвасы одновременно.
-  function kxStretchV2(){
-    var lst=[];
-    try{lst=Array.prototype.slice.call(document.querySelectorAll('canvas'));}catch(e){}
-    var cv=null,foundInput=false;
-    lst.forEach(function(c){ if(c.tabIndex===-1){cv=c;foundInput=true;} });
-    if(!cv){
-      var w=-1;
-      lst.forEach(function(c){ if((c.width||0)>w){w=c.width;cv=c;} });
-    }
-    if(!cv){setTimeout(kxStretchV2,500);return;}
-    if(!foundInput&&cv.width<300){setTimeout(kxStretchV2,500);return;}
-    var scr=cv.parentElement;
-    if(scr){
-      try{scr.style.overflow='hidden';scr.style.width='100vw';scr.style.height='100vh';scr.style.position='fixed';scr.style.left='0';scr.style.top='0';scr.style.margin='0';scr.style.maxWidth='none';}catch(e){}
-    }
-    var s=cv.style;
-    s.position='fixed';s.left='0';s.top='0';s.width='100vw';s.height='100vh';
-    s.maxWidth='none';s.maxHeight='none';s.objectFit='fill';s.margin='0';s.border='0';s.zIndex='5';
-    var z=4;
-    lst.forEach(function(c){ if(c===cv)return; var cs=c.style;
-      cs.position='fixed';cs.left='0';cs.top='0';cs.width='100vw';cs.height='100vh';
-      cs.maxWidth='none';cs.maxHeight='none';cs.objectFit='fill';cs.margin='0';cs.border='0';cs.zIndex=String(z); });
-    setTimeout(kxStretchV2,1000);
-  }
-  setTimeout(kxStretchV2,200);
-  setTimeout(kxStretchV2,1500);
-  setTimeout(kxStretchV2,5000);
+  setTimeout(kxStretchV3,300);
+  setTimeout(kxStretchV3,1200);
+  setTimeout(kxStretchV3,4000);
+  setTimeout(kxStretchV3,10000);
 })();
